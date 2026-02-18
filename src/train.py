@@ -3,7 +3,7 @@
 """
 Train models for Telco Customer Churn prediction.
 Models: Logistic Regression, Random Forest, XGBoost
-Author: [Your Name]
+Author: Hajer ATTAR
 """
 
 import joblib
