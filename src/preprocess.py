@@ -1,56 +1,43 @@
-import os
+
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
-def load_data():
+def load_data(path='../data/raw/Customer-Churn.csv'):
     """
-    Charge le fichier Customer-Churn.csv depuis le dossier data/raw
-    en utilisant un chemin relatif basé sur le script.
+    Load the Customer Churn dataset CSV
     """
-    # Chemin du dossier du script
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # src/
-    # Chemin complet vers le fichier CSV
-    file_path = os.path.normpath(os.path.join(BASE_DIR, '..', 'data', 'raw', 'Customer-Churn.csv'))
-
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Le fichier n'a pas été trouvé : {file_path}")
-
-    df = pd.read_csv(file_path)
-    print("Fichier chargé avec succès !")
-    print(df.head())
+    df = pd.read_csv(path)
     return df
 
 def preprocess_data(df):
     """
-    Prétraitement du jeu de données :
-    - Encode les colonnes catégorielles
-    - Sépare features et target
-    - Normalise les features numériques
+    Preprocess the dataset:
+    - Encode categorical columns with one-hot
+    - Scale numeric columns
+    - Split into train and test sets
+    Returns:
+        X_train, X_test, y_train, y_test (DataFrames for X)
     """
-    # Exemple : encode la colonne 'Churn' si c'est la target
-    if 'Churn' in df.columns:
-        le = LabelEncoder()
-        df['Churn'] = le.fit_transform(df['Churn'])
+    df = df.copy()
 
-    # Identifier les colonnes numériques et catégorielles
-    num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-
-    # Encoder les colonnes catégorielles
-    df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
-
-    # Séparer features et target
+    # Target
+    y = df['Churn'].map({'Yes':1, 'No':0})
     X = df.drop('Churn', axis=1)
-    y = df['Churn']
 
-    # Normalisation
+    # One-hot encode categorical features
+    cat_cols = X.select_dtypes(include=['object']).columns.tolist()
+    X = pd.get_dummies(X, columns=cat_cols, drop_first=True)
+
+    # Scale numeric features
+    num_cols = X.select_dtypes(include=['int64','float64']).columns.tolist()
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    X[num_cols] = scaler.fit_transform(X[num_cols])
 
-    # Split train/test
+    # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y, test_size=0.2, random_state=42, stratify=y
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
 
     print("Prétraitement terminé !")
@@ -58,7 +45,3 @@ def preprocess_data(df):
     print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
     return X_train, X_test, y_train, y_test
-
-if __name__ == "__main__":
-    df = load_data()
-    X_train, X_test, y_train, y_test = preprocess_data(df)

@@ -1,4 +1,3 @@
-# src/predict.py
 
 import os
 import pandas as pd
@@ -9,61 +8,72 @@ def load_model(model_path):
     """
     Load the trained Random Forest model from disk.
     """
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found: {model_path}")
     model = joblib.load(model_path)
     print("Model loaded successfully!")
     return model
 
+def load_trained_columns(columns_path):
+    """
+    Load the column names that were used during training.
+    These are required to align new data for prediction.
+    """
+    columns = joblib.load(columns_path)
+    print("Trained columns loaded successfully!")
+    return columns
+
 def preprocess_new_data(df, trained_columns):
     """
-    Preprocess new data for prediction:
-    - One-hot encode categorical features
-    - Align columns with training data
-    - Scale numeric features
+    Preprocess new customer data before prediction:
+    1. One-hot encode categorical features
+    2. Add any missing columns that were in the training set
+    3. Keep columns in the exact order of training
+    4. Scale numeric features
     """
+    df = df.copy()  # Avoid modifying original dataframe
+
     # Identify categorical columns
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-    
+
     # One-hot encode categorical columns
     df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
 
-    # Add missing columns from training
+    # Add missing columns with 0 values
     for col in trained_columns:
         if col not in df.columns:
             df[col] = 0
 
-    # Keep only training columns order
+    # Reorder columns to match training
     df = df[trained_columns]
 
-    # Scale features
+    # Scale numeric columns
+    num_cols = df.select_dtypes(include=['int64','float64']).columns.tolist()
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df)
+    df[num_cols] = scaler.fit_transform(df[num_cols])
 
-    return X_scaled
+    return df
 
 def predict_churn(new_data_path):
     """
-    Load new customer data and predict churn.
+    Load new customer CSV, preprocess it, and predict churn.
     """
-    # Paths
-    model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models', 'random_forest_churn.pkl')
+    # Paths to saved model and training columns
+    models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models')
+    model_path = os.path.join(models_dir, 'random_forest_churn.pkl')
+    columns_path = os.path.join(models_dir, 'trained_columns.pkl')
 
-    # Load model
+    # Load model and training columns
     model = load_model(model_path)
+    trained_columns = load_trained_columns(columns_path)
 
     # Load new customer data
     new_df = pd.read_csv(new_data_path)
     print("New customer data loaded:")
     print(new_df.head())
 
-    # Get the columns used in training
-    trained_columns = joblib.load(os.path.join(os.path.dirname(model_path), 'trained_columns.pkl'))
-
-    # Preprocess new data
+    # Preprocess new data to match training columns
     X_new = preprocess_new_data(new_df, trained_columns)
 
-    # Make predictions
+    # Predict churn
     predictions = model.predict(X_new)
     new_df['Churn_Prediction'] = predictions
 
@@ -72,5 +82,5 @@ def predict_churn(new_data_path):
     return new_df
 
 if __name__ == "__main__":
-    # Example usage: replace with your new data CSV
+    # Example usage: provide path to new customer CSV
     predict_churn('../data/new_customers.csv')
