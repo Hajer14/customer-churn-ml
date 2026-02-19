@@ -3,6 +3,7 @@
 from preprocess import load_data, preprocess_data
 from model import train_model, evaluate_model, save_model
 import os
+import joblib
 
 def main():
     """
@@ -20,6 +21,12 @@ def main():
     print("\n=== Preprocessing data ===")
     # Preprocess the data: encode, scale, and split
     X_train, X_test, y_train, y_test = preprocess_data(df)
+
+    # Save the column names for use in prediction pipeline
+    trained_columns = X_train.columns.tolist()
+    joblib.dump(trained_columns, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'models', 'trained_columns.pkl'))
+
+    
 
     print("\n=== Training model ===")
     # Train the Random Forest model
