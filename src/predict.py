@@ -32,7 +32,8 @@ def preprocess_new_data(df, trained_columns):
     df = df.copy()  # Avoid modifying original dataframe
 
     # Identify categorical columns
-    cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+    cat_cols = df.select_dtypes(include=[str]).columns.tolist()
+
 
     # One-hot encode categorical columns
     df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
